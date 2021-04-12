@@ -65,15 +65,15 @@ class ExpansivePath(nn.Module):
 
     def forward(self, cache, x):
         x = self.upconv(x)
-        print(f"x.shape: {x.shape}")
-        print(f"cache.shape: {cache.shape}")
+        # print(f"x.shape: {x.shape}")
+        # print(f"cache.shape: {cache.shape}")
         diffY = cache.size()[2] - x.size()[2]
         diffX = cache.size()[3] - x.size()[3]
 
         x = F.pad(x, [diffX // 2, diffX - diffX // 2,
                       diffY // 2, diffY - diffY // 2])
         x = torch.cat([cache, x], dim=1)
-        print(f"x.shape: {x.shape}")
+        # print(f"x.shape: {x.shape}")
         x = self.convnet(x)
         return x
 
@@ -89,13 +89,16 @@ class UNet(nn.Module):
 
     def forward(self, x):
         x = self.input_conv(x)
+        self.caches.append(x)
         for block in self.left:
             x = block(x)
             self.caches.append(x)
         del self.caches[-1]
         self.caches.reverse()
+        print(f"len cache: {len(self.caches)}")
         for block, cache in zip(self.right, self.caches):
-            print(f"x.shaope:    {x.shape}")
+            print("*"*20)
+            print(f"x.shape:    {x.shape}")
             print(f"cache.shape: {cache.shape}")
             x = block(cache, x)
         print(f"x.shape: {x.shape}")
@@ -167,4 +170,6 @@ if __name__ == "__main__":
     torch.manual_seed(0)
     datas = torch.randn(64, 224, 3, 3)
     y = model(datas)
-    make_dot(y, params=model.named_parameters)
+    dot = make_dot(y, params=dict(model.named_parameters()))
+    dot.format = 'png'
+    dot.render("graph_image")
